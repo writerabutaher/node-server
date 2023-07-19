@@ -2,7 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Contact = require("../models/contactModel");
 
 const getContacts = asyncHandler(async (req, res) => {
-  const contacts = await Contact.find();
+  const contacts = await Contact.find({ user_id: req.user.id });
   res.status(200).json(contacts);
 });
 
@@ -13,9 +13,6 @@ const getContact = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Contact not found");
   }
-  // if (!contact) {
-  //   return res.status(404).json({ message: "Contact not found" });
-  // }
   res.status(200).json(contact);
 });
 
@@ -29,6 +26,7 @@ const createContact = asyncHandler(async (req, res) => {
     throw new Error("All fields are mandatory !");
   }
   const contact = await Contact.create({
+    user_id: req.user.id,
     name,
     email,
     phone,

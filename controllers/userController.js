@@ -1,18 +1,13 @@
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
-
-// get all the users
-const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find();
-  res.status(200).json({ users });
-});
 
 // create a new user
 const createUser = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  const { name, email, password } = req.body;
 
-  if (!username || !email || !password) {
+  if (!name || !email || !password) {
     res.status(400);
     throw new Error("All fields are mandatory");
   }
@@ -26,7 +21,7 @@ const createUser = asyncHandler(async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const user = await User.create({
-    username,
+    name,
     email,
     password: hashedPassword,
   });
@@ -37,11 +32,44 @@ const createUser = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("User info is not valid");
   }
+
+  res.json("User register successfully");
 });
 
 // login user
+const loginUser = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400);
+    throw new Error("All fields are mandatory");
+  }
+  const user = await User.findOne({ email });
+  const accessToken = jwt.sign(
+    {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "1h" }
+  );
+  if (user && (await bcrypt.compare(password, user.password))) {
+    res.status(200).json(accessToken);
+  } else {
+    res.status(401);
+    throw new Error("Invalid email or password");
+  }
+});
+
+// current user
+const currentUser = asyncHandler(async (req, res) => {
+  res.json(req.user);
+});
 
 module.exports = {
-  getUsers,
   createUser,
+  loginUser,
+  currentUser,
 };
